@@ -1,0 +1,127 @@
+<!-- @app.api_route("/edit_business_details/{username}", methods=["GET", "POST"], response_class=HTMLResponse)
+async def edit_business_details(request: Request, username: str):
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    if user is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+    
+    if request.method == "POST":
+        form = await request.json()
+        name = form.get("name")
+        password = form.get("password")
+        contact = form.get("contact")
+        business_name = form.get("business_name")
+        business_bio = form.get("business_bio")
+        business_website = form.get("business_website")
+        business_email = form.get("business_email")
+        optional_address = form.get("optional_address")
+        whatsapp_number = form.get("whatsapp_number")
+        optional_insta = form.get("optional_insta")
+        optional_facebook = form.get("optional_facebook")
+        optional_youtube = form.get("optional_youtube")
+
+        c.execute("""
+            UPDATE users
+            SET name=?, password=?, contact=?, business_name=?, business_bio=?, business_website=?, business_email=?, 
+             optional_address=?, whatsapp_number=?, optional_insta=?, optional_facebook=?, optional_youtube=?,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE username=?
+        """, (name, password, contact, business_name, business_bio, business_website, business_email,
+            optional_address, whatsapp_number, optional_insta, optional_facebook, optional_youtube, username))
+        conn.commit()
+        conn.close()
+
+        return {"message": "Business details updated successfully."}
+
+    return templates.TemplateResponse(
+        request=request,
+        name="edit_business.html",
+        context={"request": request, "user": user}
+    ) -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Business Details</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+
+</head>
+<body>
+    <nav class="navbar">
+            <button onclick="window.location.href='/'">Home</button>
+    </nav>
+    <main class="page-shell">
+        <section class="card edit-business-form">
+            <h1>Edit Business Details</h1>
+            <form id="editBusinessForm">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" value="{{ user.name }}" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" value="{{ user.password }}" required>
+                <label for="contact">Contact:</label>
+                <input type="text" id="contact" name="contact" value="{{ user.contact }}" required>
+                <label for="business_name">Business Name:</label>
+                <input type="text" id="business_name" name="business_name" value="{{ user.business_name }}" required>
+                <label for="business_bio">Business Bio:</label>
+                <textarea id="business_bio" name="business_bio" required>{{ user.business_bio }}</textarea>
+                <label for="business_website">Business Website:</label>
+                <input type="text" id="business_website" name="business_website" value="{{ user.business_website }}">
+                <label for="business_email">Business Email:</label>
+                <input type="email" id="business_email" name="business_email" value="{{ user.business_email }}" required>
+                <label for="optional_address">Optional Address:</label>
+                <input type="text" id="optional_address" name="optional_address" value="{{ user.optional_address }}">
+                <label for="whatsapp_number">WhatsApp Number:</label>
+                <input type="text" id="whatsapp_number" name="whatsapp_number" value="{{ user.whatsapp_number }}">
+                <label for="optional_insta">Optional Instagram:</label>
+                <input type="text" id="optional_insta" name="optional_insta" value="{{ user.optional_insta }}">
+                <label for="optional_facebook">Optional Facebook:</label>
+                <input type="text" id="optional_facebook" name="optional_facebook" value="{{ user.optional_facebook }}">
+                <label for="optional_youtube">Optional YouTube:</label>
+                <input type="text" id="optional_youtube" name="optional_youtube" value="{{ user.optional_youtube }}">
+                <button type="submit">Update</button>
+            </form>
+        </section>
+    </main>
+    <script>
+        document.getElementById('editBusinessForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                name: document.getElementById('name').value,
+                password: document.getElementById('password').value,
+                contact: document.getElementById('contact').value,
+                business_name: document.getElementById('business_name').value,
+                business_bio: document.getElementById('business_bio').value,
+                business_website: document.getElementById('business_website').value,
+                business_email: document.getElementById('business_email').value,
+                optional_address: document.getElementById('optional_address').value,
+                whatsapp_number: document.getElementById('whatsapp_number').value,
+                optional_insta: document.getElementById('optional_insta').value,
+                optional_facebook: document.getElementById('optional_facebook').value,
+                optional_youtube: document.getElementById('optional_youtube').value
+            };
+
+            const response = await fetch('/edit_business_details/{{ user.username }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            const result = await response.json();
+            alert(result.message);
+            if (response.ok) {
+                window.location.href = '/business/{{ user.username }}';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import sqlite3
 
 # users:
-# userid, name, email (unique), password, contact, business_name, business_bio, business_website, business_logo_url, optional_address, username (unique), created_at, updated_at, whatsapp_number, optional_insta, optional_facebook, optional_youtube,
+# userid, name, email (unique), password, contact, business_name, business_bio, business_website, business_logo_url, business_email, optional_address, username (unique), created_at, updated_at, whatsapp_number, optional_insta, optional_facebook, optional_youtube,
 
 # images:
 # imageid, userid, image_url, created_at, updated_at
@@ -26,22 +26,23 @@ def init_db():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             userid INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            contact TEXT,
-            business_name TEXT,
-            business_bio TEXT,
-            business_website TEXT,
-            business_logo_url TEXT,
-            optional_address TEXT,
+            contact TEXT DEFAULT '',
+            business_name TEXT DEFAULT '',
+            business_bio TEXT DEFAULT '',
+            business_website TEXT DEFAULT '',
+            business_logo_url TEXT DEFAULT '',
+            business_email TEXT DEFAULT '',
+            optional_address TEXT DEFAULT '',
             username TEXT UNIQUE NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            whatsapp_number TEXT,
-            optional_insta TEXT,
-            optional_facebook TEXT,
-            optional_youtube TEXT
+            whatsapp_number TEXT DEFAULT '',
+            optional_insta TEXT DEFAULT '',
+            optional_facebook TEXT DEFAULT '',
+            optional_youtube TEXT DEFAULT ''
         )
     """)
 

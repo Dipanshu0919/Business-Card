@@ -4,13 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Business Card</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
 </head>
 <body>
-    <div class="business-card">
-        <h1>John Doe</h1>
-        <p>Software Engineer</p>
-        <p>Email: john.doe@example.com</p>
-    </div>
+
+    {% if not user %}
+        {% set user = {"name": "Dude"} %}
+    {% endif %}
+
+    <nav class="navbar">
+
+        {% if not request.session.get("user_id") %}
+            <button onclick="window.location.href='/login'">Login</button>
+        {% endif %}
+
+        {% if not request.session.get("admin_username") %}
+            <button onclick="window.location.href='/admin/login'">Admin Login</button>
+        {% endif %}
+
+        {% if request.session.get("user_id") %}
+            <button onclick="redirectBusinessEditPage()">Edit Business Details</button>
+            <button onclick="window.location.href='/business/{{ user.username }}'">View Business Card</button>
+            <button onclick="logout()">Logout</button>
+        {% endif %}
+
+        {% if request.session.get("admin_username") %}
+            <button onclick="window.location.href='/adduser'">Add New User</button>
+            <button onclick="adminLogout()">Admin Logout</button>
+        {% endif %}
+
+
+    </nav>
+    <main class="page-shell">
+        <section class="card business-card">
+            <div class="card-badge">Business Card</div>
+            <h1>Hey there, {{ user.name }} 🤝!</h1>
+            <p>Welcome to your business card management system.</p>
+        </section>
+
+        <section class="directory-section">
+            <div class="directory-header">
+                <div>
+                    <h2>Registered Businesses</h2>
+                    <p>Browse every business registered with us on this platform and click any to view its details.</p>
+                </div>
+                <div class="directory-count">{{ allbusinesses|length }} listed</div>
+            </div>
+
+            <div class="business-directory-grid">
+                {% for business_name, username in allbusinesses %}
+                <a class="directory-card" href="/business/{{ username }}">
+                    <div class="directory-avatar" aria-hidden="true">
+                        {{ business_name[0] if business_name else username[0] }}
+                    </div>
+                    <div class="directory-copy">
+                        <h3>{{ business_name }}</h3>
+                        <p>@{{ username }}</p>
+                    </div>
+                    <span class="directory-action">View card</span>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+<script>
+function logout() {
+    fetch('/logout', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            window.location.href = '/';
+        });
+}
+function adminLogout() {
+    fetch('/admin/logout', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            window.location.href = '/';
+        });
+}
+function redirectBusinessEditPage() {
+    window.location.href = '/edit_business_details/{{ user.username}}';
+}
+</script>
 </body>
 </html>

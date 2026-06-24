@@ -1,0 +1,67 @@
+<!-- @app.get("/add_user")
+async def add_user():
+    name = Request.form.get("name")
+    email = Request.form.get("email")
+    password = Request.form.get("password")
+    username = Request.form.get("username")
+    conn, c = get_db()
+    c.execute("""
+        INSERT OR IGNORE INTO users (name, email, password, username)
+        VALUES (?, ?, ?, ?)
+    """, (name, email, password, username))
+    conn.commit()
+    return {"message": "User added successfully."} -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add User</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+            <button onclick="window.location.href='/'">Home</button>
+    </nav>
+    
+    <main class="page-shell">
+        <section class="card add-user-form">
+        <h1>Add User</h1>
+        <form id="addUserForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <button type="submit">Add User</button>
+        </form>
+        </section>
+    </main>
+
+    <script>
+document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const username = document.getElementById('username').value;
+    const response = await fetch('/add_user', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password, username })
+    });
+    const result = await response.json();
+    alert(result.message);
+    document.getElementById('addUserForm').reset();
+});
+    </script>
+</body>
+</html> 

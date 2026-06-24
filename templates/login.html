@@ -1,0 +1,67 @@
+<!-- @app.api_route("/login", methods=["GET", "POST"], response_class=HTMLResponse)
+async def login(request: Request):
+    if request.method == "POST":
+        form = await request.json()
+        username = form.get("username")
+        password = form.get("password")
+        email = form.get("email")  # Optional: allow login with email as well
+
+        conn, c = get_db()
+        c.execute("SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?", (username, email, password))
+        user = c.fetchone()
+
+        if user:
+            return {"message": "Login successful.", "user": user}
+        else:
+            return {"message": "Invalid credentials."}
+
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"request": request}
+    ) -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+    <main class="page-shell">
+        <section class="card login-form">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <label for="username">Username or Email:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">Login</button>
+        </form>
+        </section>
+    </main>
+    <script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const email = document.getElementById('username').value; // Use the same input for email
+    const response = await fetch('/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password, email })
+    });
+    const result = await response.json();
+    alert(result.message);
+    if (result.user) {
+        window.location.href = `/`;
+    }
+});
+    </script>
+</body>
+</html>

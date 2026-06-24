@@ -1,0 +1,63 @@
+<!-- @app.post("/admin/login")
+async def admin_login_get(request: Request):
+   # same as /login just set username in session
+    form = await request.json()
+    username = form.get("username")
+    password = form.get("password")
+    email = form.get("email")
+
+    admin_username = os.getenv("ADMIN_USERNAME")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    admin_email = os.getenv("ADMIN_EMAIL")
+
+    if (username == admin_username and password == admin_password):
+        request.session["admin"] = True
+        return {"message": "Admin login successful."}
+    else:
+        return {"message": "Invalid admin credentials."} -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+    <main class="page-shell">
+        <section class="card login-form">
+        <h1>Admin Login</h1>
+        <form id="adminLoginForm">
+            <label for="username">Username or Email:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">Login</button>
+        </form>
+        </section>
+    </main>
+
+    <script>
+document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const response = await fetch('/admin/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+    });
+    const result = await response.json();
+    alert(result.message);
+    if (result.message === "Admin login successful.") {
+        window.location.href = '/';
+    }
+});
+    </script>
+</body>
+</html>
