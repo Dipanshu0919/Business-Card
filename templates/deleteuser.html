@@ -1,0 +1,63 @@
+<!-- @app.post("/delete_user/")
+async def delete_user(request: Request):
+    if not admin_required(request):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    form = await request.json()
+    username = form.get("username")
+        
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    if user is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found.")
+    else:
+        c.execute("DELETE FROM images WHERE userid = ?", (user["userid"],))
+        c.execute("DELETE FROM users WHERE username = ?", (username,))
+        conn.commit()
+        conn.close()
+    return {"message": f"User '{username}' deleted successfully."} -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete User</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+            <button onclick="window.location.href='/'">Home</button>
+    </nav>
+    <main class="page-shell">
+        <section class="card delete-user-form">
+            <h1>Delete User</h1>
+            <form id="deleteUserForm">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                <button type="submit">Delete User</button>
+            </form>
+        </section>
+    </main>
+
+    <script>
+
+document.getElementById('deleteUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const response = await fetch('/delete_user', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
+    });
+    const result = await response.json();
+    alert(result.message);
+});
+</script>
+</body>
+</html>

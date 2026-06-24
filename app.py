@@ -1,13 +1,10 @@
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from fastapi import HTTPException
-
-#session import using starlette
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi import Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -99,6 +96,39 @@ async def add_user_form(request: Request, is_admin: bool = Depends(admin_require
         name="adduser.html"
     )
 
+@app.get("/delete_user", response_class=HTMLResponse)
+async def delete_user_form(request: Request, is_admin: bool = Depends(admin_required)):
+    if not is_admin:
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="deleteuser.html"
+    )
+
+@app.post("/delete_user")
+async def delete_user(request: Request):
+    if not admin_required(request):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    form = await request.json()
+    username = form.get("username")
+        
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ? or email = ?", (username, username))
+    user = c.fetchone()
+    if user is None:
+        conn.close()
+        return {"message": f"User '{username}' does not exist."}
+    else:
+        c.execute("DELETE FROM images WHERE userid = ?", (user["userid"],))
+        c.execute("DELETE FROM users WHERE username = ? or email = ?", (username, username))
+        conn.commit()
+        conn.close()
+    return {"message": f"User '{username}' deleted successfully."}
+
 
 @app.post("/add_user")
 async def add_user(request: Request):
@@ -178,6 +208,39 @@ async def edit_business_details(request: Request, username: str):
     conn.close()
 
     return JSONResponse({"message": "Business details updated successfully."})
+
+
+@app.post("/edit_business_details/{username}/upload_edit_logo", response_class=JSONResponse)
+async def upload_edit_logo(request: Request, username: str):
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    if user is None:
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+    
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        return JSONResponse({"message": "No file uploaded."}, status_code=400)
+
+    # Save the uploaded file to the static directory
+    file_location = f"static/uploads/{user['userid']}_{username}_logo.png"
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+
+    # Update the user's business_logo_url in the database
+    db_path = f"/{file_location}"
+
+    c.execute("UPDATE users SET business_logo_url=?, updated_at=CURRENT_TIMESTAMP WHERE username=? ", (db_path, username))
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({"message": "Business logo updated successfully.", "logo_url": file_location})
 
 
 @app.get("/edit_business_details/{username}", response_class=HTMLResponse)
