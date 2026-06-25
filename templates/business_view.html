@@ -181,10 +181,16 @@ async def business_card(request: Request, username: str):
 
                 <!-- ★ THE DOWNLOADABLE CARD ★ -->
                 <div class="bc-card" id="bcCardEl">
-                    <!-- ambient background layers -->
-                    <div class="bc-glow-tl" aria-hidden="true"></div>
-                    <div class="bc-glow-br" aria-hidden="true"></div>
-                    <div class="bc-dots"    aria-hidden="true"></div>
+                    <!-- static visual effects -->
+                    <div class="bc-glow-tl"      aria-hidden="true"></div>
+                    <div class="bc-glow-br"      aria-hidden="true"></div>
+                    <div class="bc-dots"         aria-hidden="true"></div>
+                    <div class="bc-accent-bar"   aria-hidden="true"></div>
+                    <div class="bc-accent-bottom" aria-hidden="true"></div>
+                    <div class="bc-corner bc-corner--tl" aria-hidden="true"></div>
+                    <div class="bc-corner bc-corner--tr" aria-hidden="true"></div>
+                    <div class="bc-corner bc-corner--bl" aria-hidden="true"></div>
+                    <div class="bc-corner bc-corner--br" aria-hidden="true"></div>
 
                     <!-- LEFT: logo + name (horizontal) + contact meta -->
                     <div class="bc-left">
@@ -241,9 +247,9 @@ async def business_card(request: Request, username: str):
 
                 <!-- Download button — NOT part of the downloadable card -->
                 <div class="bc-actions">
-                    <button class="bc-dl" id="bcDlBtn" onclick="bcDownload()">
+                    <button class="bc-dl" id="bcDlBtn" onclick="bcSavePDF()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M5 14l7 7 7-7"/><path d="M3 21h18"/></svg>
-                        Download Card
+                        Save as PDF
                     </button>
                 </div>
 
@@ -255,8 +261,6 @@ async def business_card(request: Request, username: str):
 
     <!-- QR code renderer -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- PNG export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <script>
     let qrRendered = false;
@@ -272,7 +276,6 @@ async def business_card(request: Request, username: str):
     function bcRenderQR() {
         const el = document.getElementById('bcQrEl');
         if (!el || qrRendered) return;
-
         new QRCode(el, {
             text: window.location.href,
             width: 400,
@@ -282,17 +285,12 @@ async def business_card(request: Request, username: str):
             correctLevel: QRCode.CorrectLevel.H
         });
         qrRendered = true;
-
-        // Convert canvas → <img> so html2canvas can capture it cleanly.
-        // qrcodejs may produce either a <canvas> or an <img> depending on browser.
-        // We normalise to a plain <img> after a short paint delay.
+        // Convert canvas → <img> (400px source, displayed at 116px — never upsampled)
         setTimeout(function () {
             var canvas = el.querySelector('canvas');
             if (canvas) {
-                var dataUrl = canvas.toDataURL('image/png');
                 var img = new Image();
-                img.src = dataUrl;
-                // Source is 400×400; CSS downscales to 136×136 — always crisp, never upsampled
+                img.src = canvas.toDataURL('image/png');
                 img.style.cssText = 'display:block;width:116px;height:116px;';
                 el.innerHTML = '';
                 el.appendChild(img);
@@ -300,79 +298,132 @@ async def business_card(request: Request, username: str):
         }, 150);
     }
 
-    // Pre-render logo with object-fit:contain math so html2canvas captures it correctly.
-    // html2canvas v1.4 ignores object-fit, causing the logo to stretch.
-    // We draw the image onto a canvas at the exact container size, then swap the src.
-    async function preRenderLogo() {
-        const logoImg = document.querySelector('#bcCardEl .bc-logo img');
-        if (!logoImg) return null;
-
-        // Ensure the image is fully loaded
-        if (!logoImg.complete || logoImg.naturalWidth === 0) {
-            await new Promise(res => { logoImg.onload = res; logoImg.onerror = res; });
-        }
-
-        const box    = logoImg.parentElement;
-        const bw     = box.offsetWidth;
-        const bh     = box.offsetHeight;
-        const iw     = logoImg.naturalWidth;
-        const ih     = logoImg.naturalHeight;
-        const origSrc = logoImg.src;
-        const origStyle = logoImg.getAttribute('style') || '';
-
-        // object-fit: contain — scale to fit, centered
-        const r  = Math.min(bw / iw, bh / ih);
-        const dw = iw * r;
-        const dh = ih * r;
-        const dx = (bw - dw) / 2;
-        const dy = (bh - dh) / 2;
-
-        const c   = document.createElement('canvas');
-        c.width   = bw;
-        c.height  = bh;
-        const ctx = c.getContext('2d');
-        ctx.drawImage(logoImg, dx, dy, dw, dh);
-
-        logoImg.src = c.toDataURL('image/png');
-        logoImg.style.cssText = `display:block;width:${bw}px;height:${bh}px;object-fit:fill;`;
-
-        // Return a restore function
-        return function restore() {
-            logoImg.src = origSrc;
-            logoImg.setAttribute('style', origStyle);
-        };
+    // Convert a URL to base64 data-URI so the print window can load it cross-origin
+    async function toDataURI(url) {
+        try {
+            const res  = await fetch(url, { mode: 'cors' });
+            const blob = await res.blob();
+            return await new Promise((ok, fail) => {
+                const r = new FileReader();
+                r.onloadend = () => ok(r.result);
+                r.onerror   = () => fail();
+                r.readAsDataURL(blob);
+            });
+        } catch { return url; }   // fallback: keep original URL
     }
 
-    async function bcDownload() {
-        const card = document.getElementById('bcCardEl');
-        const btn  = document.getElementById('bcDlBtn');
-
-        btn.textContent = 'Generating…';
+    async function bcSavePDF() {
+        const btn = document.getElementById('bcDlBtn');
+        btn.textContent = 'Preparing PDF…';
         btn.disabled = true;
 
-        let restoreLogo = null;
         try {
-            restoreLogo = await preRenderLogo();
+            // 1 ── Fetch stylesheet to inline it (avoids cross-origin sheet issues)
+            const cssText = await fetch('/static/style.css')
+                                    .then(r => r.text()).catch(() => '');
 
-            const canvas = await html2canvas(card, {
-                scale: 2.5,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: '#06101f',
-                logging: false,
-                removeContainer: true
-            });
+            // 2 ── Snapshot card HTML
+            const cardEl  = document.getElementById('bcCardEl');
+            let   cardHTML = cardEl.outerHTML;
 
-            const link = document.createElement('a');
-            link.download = 'business-card.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            // 3 ── Convert logo to base64 so it loads in the isolated print window
+            const logoImg = cardEl.querySelector('.bc-logo img');
+            if (logoImg && logoImg.src && !logoImg.src.startsWith('data:')) {
+                const b64  = await toDataURI(logoImg.src);
+                cardHTML   = cardHTML.split(logoImg.src).join(b64);
+            }
+
+            // 4 ── Write print window WITHOUT @page constraints first
+            //       so the card renders at its natural screen pixel size.
+            //       Animations are paused immediately so they don't inflate layout.
+            const baseHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+${cssText}
+/* Freeze animations so measurement is stable */
+*, *::before, *::after {
+    animation-play-state: paused !important;
+    animation-delay: 0s !important;
+    transition: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+}
+html, body {
+    margin: 0; padding: 0;
+    background: #06101f !important;
+}
+body {
+    display: block;
+    width: max-content;
+}
+.bc-card {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+</style>
+</head>
+<body>${cardHTML}</body>
+</html>`;
+
+            const pw = window.open('', '_blank', 'width=800,height=500');
+            pw.document.open();
+            pw.document.write(baseHTML);
+            pw.document.close();
+
+            // 5 ── Wait for layout + images to settle
+            await new Promise(r => setTimeout(r, 700));
+
+            // 6 ── Measure the rendered card's exact pixel dimensions
+            const rendered = pw.document.querySelector('.bc-card');
+            const rect     = rendered
+                ? rendered.getBoundingClientRect()
+                : { width: 620, height: 260 };
+
+            const W = Math.ceil(rect.width);
+            const H = Math.ceil(rect.height);
+
+            // 7 ── Inject @page sized to match the card's px dimensions
+            //       1px = 25.4 / 96 mm = 0.26458mm at standard 96 dpi
+            const PX_TO_MM = 25.4 / 96;
+            const wMM = (W * PX_TO_MM).toFixed(2);
+            const hMM = (H * PX_TO_MM).toFixed(2);
+
+            const pageStyle = pw.document.createElement('style');
+            pageStyle.textContent = `
+                @page { size: ${wMM}mm ${hMM}mm; margin: 0; }
+                html {
+                    width: ${W}px !important;
+                    height: ${H}px !important;
+                    max-height: ${H}px !important;
+                    overflow: hidden !important;
+                }
+                body {
+                    width: ${W}px !important;
+                    height: ${H}px !important;
+                    max-height: ${H}px !important;
+                    overflow: hidden !important;
+                    display: block !important;
+                }
+                * { animation: none !important; transition: none !important; }
+            `;
+            pw.document.head.appendChild(pageStyle);
+
+            // 8 ── Small tick so the new @page rule is picked up before print
+            await new Promise(r => setTimeout(r, 120));
+            pw.focus();
+            pw.print();
+
+            pw.addEventListener('afterprint', () => pw.close(), { once: true });
+            setTimeout(() => { try { pw.close(); } catch (_) {} }, 10000);
+
         } catch (err) {
-            console.error('Download error:', err);
-            alert('Export failed. Try right-clicking the card and saving as image.');
+            console.error('PDF export error:', err);
+            alert('Export failed. Try again or screenshot the card.');
         } finally {
-            if (restoreLogo) restoreLogo();
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 3v13M5 14l7 7 7-7"/><path d="M3 21h18"/></svg> Download Card';
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 3v13M5 14l7 7 7-7"/><path d="M3 21h18"/></svg> Save as PDF`;
             btn.disabled = false;
         }
     }

@@ -195,12 +195,12 @@ async def upload_edit_logo(request: Request, username: str):
                         // Update the displayed logo without reloading the page
                         const logoImg = document.querySelector('.business-logo');
                         if (logoImg) {
-                            logoImg.src = result.logo_url + '?t=' + new Date().getTime();
+                            logoImg.src = result.logo_url;
                         } else {
                             // If the logo image doesn't exist, create it
                             const profileBadge = document.querySelector('.profile-badge');
                             const newImg = document.createElement('img');
-                            newImg.src = result.logo_url + '?t=' + new Date().getTime();
+                            newImg.src = result.logo_url;
                             newImg.alt = '{{ user.business_name }}';
                             newImg.className = 'business-logo';
                             profileBadge.innerHTML = ''; // Clear any fallback text

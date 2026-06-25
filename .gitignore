@@ -26,3 +26,5 @@ modules/__pycache__/
 modules/*.pyc
 
 .vscode/
+
+static/uploads/
