@@ -28,3 +28,7 @@ modules/*.pyc
 .vscode/
 
 static/uploads/
+
+static/uploads
+
+static/uploads/*
