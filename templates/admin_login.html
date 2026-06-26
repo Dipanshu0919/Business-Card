@@ -27,6 +27,9 @@ async def admin_login_get(request: Request):
     <script defer src="/static/decor.js"></script>
 </head>
 <body>
+    <nav class="navbar">
+            <button onclick="window.location.href='/'">Home</button>
+    </nav>
     <main class="page-shell">
         <section class="card login-form">
         <h1>Admin Login</h1>
@@ -34,7 +37,10 @@ async def admin_login_get(request: Request):
             <label for="username">Username or Email:</label>
             <input type="text" id="username" name="username" required>
             <label for="password">Password:</label>
+            <div class="password-field">
             <input type="password" id="password" name="password" required>
+            <button type="button" id="togglePassword" class="toggle-password-btn">Show Password</button>
+            </div>
             <button type="submit">Login</button>
         </form>
         </section>
@@ -57,6 +63,13 @@ document.getElementById('adminLoginForm').addEventListener('submit', async (e) =
     if (result.message === "Admin login successful.") {
         window.location.href = '/';
     }
+});
+
+document.getElementById('togglePassword').addEventListener('click', () => {
+    const passwordField = document.getElementById('password');
+    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordField.setAttribute('type', type);
+    document.getElementById('togglePassword').textContent = type === 'password' ? 'Show Password' : 'Hide Password';
 });
     </script>
 </body>

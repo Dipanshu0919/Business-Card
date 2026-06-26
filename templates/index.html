@@ -15,6 +15,8 @@
 
     <nav class="navbar">
 
+        <button onclick="window.location.href='/dashboard'">Dashboard</button>
+
         {% if not request.session.get("user_id") %}
             <button onclick="window.location.href='/login'">Login</button>
         {% endif %}
@@ -44,29 +46,13 @@
             <p>Welcome to your business card management system.</p>
         </section>
 
-        <section class="directory-section">
-            <div class="directory-header">
-                <div>
-                    <h2>Registered Businesses</h2>
-                    <p>Browse every business registered with us on this platform and click any to view its details.</p>
-                </div>
-                <div class="directory-count">{{ allbusinesses|length }} listed</div>
+        <section class="card business-card">
+            <div class="card-badge">Registered Businesses</div>
+            <div class="directory-header"><h1>Total Registered Businesses</h1>
+            <div class="directory-count">{{ allbusinesses|length }} listed</div>
             </div>
-
-            <div class="business-directory-grid">
-                {% for business_name, username in allbusinesses %}
-                <a class="directory-card" href="/business/{{ username }}">
-                    <div class="directory-avatar" aria-hidden="true">
-                        {{ business_name[0] if business_name else username[0] }}
-                    </div>
-                    <div class="directory-copy">
-                        <h3>{{ business_name }}</h3>
-                        <p>@{{ username }}</p>
-                    </div>
-                    <span class="directory-action">View card</span>
-                </a>
-                {% endfor %}
-            </div>
+            <p>Browse every business registered with us on this platform click button below to view all.</p>
+            <button onclick="window.location.href='/dashboard'">View All Businesses</button>
         </section>
     </main>
 

@@ -1,0 +1,112 @@
+<!-- @app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    conn, c = get_db()
+    ...
+    is_admin = admin_required(request)
+    c.execute("SELECT userid, name, username, business_name, business_logo_url FROM users ORDER BY business_name COLLATE NOCASE ASC")
+    businesses = [...]
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"request": request, "user": user, "is_admin": is_admin, "businesses": businesses}) -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — All Businesses</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <button onclick="window.location.href='/'">Home</button>
+    </nav>
+
+    <main class="page-shell page-shell--full">
+        <section class="directory-section directory-section--top">
+
+            {% if is_admin %}
+            <div class="admin-actions">
+                <button onclick="window.location.href='/adduser'">+ Add New User</button>
+                <button onclick="window.location.href='/delete_user'">Delete User</button>
+            </div>
+            {% endif %}
+
+            <div class="directory-header">
+                <div>
+                    <h2>All Registered Businesses</h2>
+                    <p>Browse every business on the platform. Click a card to view its full profile.</p>
+                </div>
+                <span class="directory-count">{{ businesses|length }} total</span>
+            </div>
+
+            {% if businesses %}
+            <div class="business-directory-grid" id="businessGrid">
+                {% for biz in businesses %}
+                <div class="directory-card"
+                     data-username="{{ biz.username }}"
+                     onclick="window.location.href='/business/{{ biz.username }}'">
+
+                    <span class="directory-avatar" aria-hidden="true">
+                        {% if biz.business_logo_url %}
+                        <img src="{{ biz.business_logo_url }}" alt="">
+                        {% else %}
+                        {{ biz.business_name[0] if biz.business_name else (biz.name[0] if biz.name else "?") }}
+                        {% endif %}
+                    </span>
+
+                    <span class="directory-copy">
+                        <h3>{{ biz.business_name if biz.business_name else "Unnamed Business" }}</h3>
+                        <p>@{{ biz.username }}</p>
+                    </span>
+
+                    <span class="directory-action-group">
+                        <span class="directory-action">View →</span>
+                        {% if is_admin %}
+                        <button type="button"
+                                class="directory-delete-btn"
+                                onclick="event.stopPropagation(); deleteBusiness('{{ biz.username }}', this);">
+                            Delete
+                        </button>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="role">No businesses registered yet.</p>
+            {% endif %}
+
+        </section>
+    </main>
+
+    <script>
+        async function deleteBusiness(username, btn) {
+            if (!confirm(`Delete business "@${username}"? This cannot be undone.`)) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Deleting…';
+
+            try {
+                const response = await fetch('/delete_user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+                const result = await response.json();
+                alert(result.message);
+
+                if (response.ok) {
+                    const card = document.querySelector(`.directory-card[data-username="${username}"]`);
+                    if (card) card.remove();
+                }
+            } catch (err) {
+                console.error('Delete failed:', err);
+                alert('Something went wrong deleting that business. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        }
+    </script>
+</body>
+</html>

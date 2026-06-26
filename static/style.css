@@ -26,6 +26,7 @@
 html,
 body {
 	min-height: 100%;
+	max-width: 100%;
 }
 
 body {
@@ -88,15 +89,27 @@ body::before {
 	z-index: -1;
 }
 
+/* ── Page shell: vertically + horizontally centred (home, register, business view) ── */
 .page-shell {
 	min-height: 100vh;
 	display: grid;
 	place-items: center;
+	grid-template-columns: minmax(0, 1fr);   /* ← locks column to viewport width */
 	padding: 32px 16px;
 	position: relative;
 	z-index: 1;
 }
 
+/* ── Dashboard override: full-width, top-aligned ── */
+.page-shell--full {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	place-items: unset;
+	padding: 24px 20px 40px;
+}
+
+/* ── Generic card (forms, register, etc.) — keeps centred max-width ── */
 .card {
 	width: min(100%, 920px);
 	padding: 32px;
@@ -175,6 +188,11 @@ input ::placeholder, textarea ::placeholder {
 	color: rgba(174, 184, 212, 0.68);
 }
 
+input [type="file"] {
+	padding: 10px 14px;
+	background: rgba(255, 255, 255, 0.08);
+}
+
 input:focus, textarea:focus {
 	border-color: rgba(125, 211, 252, 0.75);
 	box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
@@ -205,6 +223,26 @@ button:active {
 	transform: translateY(0);
 }
 
+/* ── Password field + show/hide toggle on the same row ── */
+.password-field {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.password-field input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.toggle-password-btn {
+	flex: 0 0 auto;
+	margin-top: 0;
+	padding: 14px 18px;
+	font-size: 0.82rem;
+	white-space: nowrap;
+}
+
 .business-card {
 	text-align: left;
 }
@@ -214,11 +252,19 @@ button:active {
 	color: var(--muted);
 }
 
+/* ══════════════════════════════════════════════
+   DIRECTORY SECTION — full width, no 920 cap
+══════════════════════════════════════════════ */
 .directory-section {
-	width: min(100%, 920px);
+	width: 100%;
+	align-self: stretch;
 	margin-top: 28px;
 	display: grid;
-	gap: 8px;
+	gap: 12px;
+}
+
+.directory-section--top {
+	margin-top: 0;
 }
 
 .directory-header {
@@ -253,9 +299,38 @@ button:active {
 	letter-spacing: 0.03em;
 }
 
+/* ── Admin action buttons — subtle outline style, not CTA ── */
+.admin-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-bottom: 4px;
+}
+
+.admin-actions button {
+	margin-top: 0;
+	padding: 10px 18px;
+	border: 1px solid rgba(125, 211, 252, 0.28);
+	border-radius: 999px;
+	color: var(--text);
+	font-size: 0.88rem;
+	font-weight: 600;
+	background: rgba(255, 255, 255, 0.06);
+	box-shadow: none;
+	backdrop-filter: blur(10px);
+}
+
+.admin-actions button:hover {
+	border-color: rgba(125, 211, 252, 0.50);
+	background: rgba(56, 189, 248, 0.14);
+	box-shadow: none;
+	filter: none;
+}
+
+/* ── Responsive grid: fills available width, no fixed column count ── */
 .business-directory-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
 	gap: 14px;
 }
 
@@ -264,13 +339,14 @@ button:active {
 	grid-template-columns: auto 1fr auto;
 	align-items: center;
 	gap: 14px;
-	padding: 16px;
+	padding: 18px 20px;
 	border-radius: 22px;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	background: rgba(12, 18, 36, 0.76);
 	box-shadow: 0 18px 36px rgba(0, 0, 0, 0.20);
 	text-decoration: none;
 	color: inherit;
+	cursor: pointer;
 	transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
@@ -282,8 +358,8 @@ button:active {
 }
 
 .directory-avatar {
-	width: 52px;
-	height: 52px;
+	width: 56px;
+	height: 56px;
 	border-radius: 18px;
 	display: grid;
 	place-items: center;
@@ -293,6 +369,16 @@ button:active {
 	font-weight: 900;
 	text-transform: uppercase;
 	box-shadow: 0 10px 22px rgba(56, 189, 248, 0.24);
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.directory-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: 18px;
+	display: block;
 }
 
 .directory-copy {
@@ -301,7 +387,7 @@ button:active {
 
 .directory-copy h3 {
 	margin: 0 0 4px;
-	font-size: 1.02rem;
+	font-size: 1.05rem;
 	line-height: 1.2;
 	color: var(--text);
 	overflow: hidden;
@@ -312,11 +398,11 @@ button:active {
 .directory-copy p {
 	margin: 0;
 	color: var(--muted);
-	font-size: 0.92rem;
+	font-size: 0.9rem;
 }
 
 .directory-action {
-	padding: 9px 12px;
+	padding: 9px 14px;
 	border-radius: 999px;
 	border: 1px solid rgba(125, 211, 252, 0.20);
 	background: rgba(125, 211, 252, 0.10);
@@ -326,15 +412,55 @@ button:active {
 	white-space: nowrap;
 }
 
+.directory-action-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 0 0 auto;
+}
+
+.directory-delete-btn {
+	flex: 0 0 auto;
+	margin: 0;
+	padding: 9px 12px;
+	border: 1px solid rgba(248, 113, 113, 0.35);
+	border-radius: 999px;
+	background: rgba(248, 113, 113, 0.12);
+	color: #fca5a5;
+	font-size: 0.82rem;
+	font-weight: 800;
+	letter-spacing: 0.01em;
+	white-space: nowrap;
+	cursor: pointer;
+	box-shadow: none;
+	transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.directory-delete-btn:hover {
+	transform: translateY(-1px);
+	background: rgba(248, 113, 113, 0.22);
+	border-color: rgba(248, 113, 113, 0.55);
+	filter: none;
+}
+
+.directory-delete-btn:disabled {
+	opacity: 0.6;
+	cursor: default;
+	transform: none;
+}
+
+/* ══════════════════════════════════════════════
+   BUSINESS VIEW — centred, capped, responsive
+══════════════════════════════════════════════ */
 .business-view-card {
-	max-width: 920px;
-	width: min(100%, 920px);
+	width: min(100%, 860px);
+	margin-inline: auto;
 }
 
 .business-header {
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: 20px;
 	margin-top: 10px;
 }
 
@@ -342,7 +468,6 @@ button:active {
 	height: 22px;
 }
 
-/* ── Profile picture: no border, no clipping, show original ── */
 .profile-badge {
 	flex: 0 0 auto;
 	border-radius: 20px;
@@ -384,26 +509,28 @@ button:active {
 
 .business-bio {
 	margin-top: 0;
-	padding: 14px 16px;
+	padding: 16px 18px;
 	border-radius: 18px;
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid rgba(255, 255, 255, 0.06);
 	color: var(--text);
-	line-height: 1.55;
+	line-height: 1.6;
+	font-size: 0.97rem;
 }
 
+/* ── Business detail grid: fluid, collapses gracefully ── */
 .business-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
 	gap: 16px;
 	margin-top: 24px;
 }
 
 .business-panel {
 	display: grid;
-	gap: 12px;
+	gap: 10px;
 	align-content: start;
-	padding: 16px;
+	padding: 18px;
 	border-radius: 20px;
 	background: rgba(255, 255, 255, 0.04);
 	border: 1px solid rgba(255, 255, 255, 0.06);
@@ -424,7 +551,7 @@ button:active {
 	width: 100%;
 	margin: 0;
 	padding: 14px 16px;
-	border-radius: 18px;
+	border-radius: 16px;
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid rgba(255, 255, 255, 0.06);
 	text-decoration: none;
@@ -488,12 +615,13 @@ button:active {
 	color: var(--muted);
 }
 
+/* ── Navbar ── */
 .navbar {
 	display: flex;
 	justify-content: flex-end;
 	align-items: center;
 	gap: 12px;
-	padding: 20px 24px 0;
+	padding: 20px 20px 0;
 	position: relative;
 	z-index: 3;
 }
@@ -534,16 +662,32 @@ button:active {
 ══════════════════════════════════════════════ */
 
 .bc-section {
-	width: 660px;          /* fixed — screen matches PDF exactly */
+	width: 660px;
 	max-width: 100%;
-	overflow-x: auto;      /* scroll on narrow screens instead of squishing */
+	overflow-x: auto;
 	margin-top: 20px;
 	display: flex;
 	flex-direction: column;
 	gap: 0;
 }
 
-/* ── Toggle button ── */
+.bc-standalone {
+	width: 660px;
+	max-width: 100%;
+	overflow-x: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.bc-standalone .bc-card {
+	margin: 0 auto;
+}
+
+.bc-standalone .bc-actions {
+	margin-top: 18px;
+}
+
 .bc-toggle {
 	display: inline-flex;
 	align-items: center;
@@ -586,7 +730,6 @@ button:active {
 	transform: rotate(180deg);
 }
 
-/* ── Collapsible panel ── */
 .bc-panel {
 	overflow: hidden;
 	max-height: 0;
@@ -602,19 +745,18 @@ button:active {
 }
 
 /* ══════════════════════════════════════════════
-   THE CARD  (this is what gets downloaded)
+   THE CARD  (downloaded / printed — fixed width)
 ══════════════════════════════════════════════ */
 
 .bc-card {
 	position: relative;
-	width: 660px;          /* fixed — never reflows regardless of viewport */
+	width: 660px;
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 36px;
 	padding: 36px 40px;
-	/* Rich aurora mesh background */
 	background:
 		radial-gradient(ellipse 90% 70% at 15% 25%,  rgba(56, 189, 248, 0.14) 0%, transparent 55%),
 		radial-gradient(ellipse 70% 90% at 85% 85%,  rgba(99, 102, 241, 0.16) 0%, transparent 50%),
@@ -631,7 +773,6 @@ button:active {
 		inset 0 -1px 0 rgba(0, 0, 0, 0.30);
 }
 
-/* Top prismatic edge line */
 .bc-card::before {
 	content: '';
 	position: absolute;
@@ -649,7 +790,6 @@ button:active {
 	z-index: 4;
 }
 
-/* Static diagonal gloss — like physical card laminate sheen */
 .bc-card::after {
 	content: '';
 	position: absolute;
@@ -665,7 +805,6 @@ button:active {
 	z-index: 3;
 }
 
-/* Left accent bar — iridescent vertical strip */
 .bc-accent-bar {
 	position: absolute;
 	left: 0; top: 0; bottom: 0;
@@ -680,7 +819,6 @@ button:active {
 	z-index: 4;
 }
 
-/* Bottom accent bar — subtle */
 .bc-accent-bottom {
 	position: absolute;
 	bottom: 0; left: 0; right: 0;
@@ -693,7 +831,6 @@ button:active {
 	z-index: 4;
 }
 
-/* Corner bracket marks */
 .bc-corner {
 	position: absolute;
 	width: 18px; height: 18px;
@@ -722,7 +859,6 @@ button:active {
 	border-radius: 0 0 4px 0;
 }
 
-/* Ambient glows — stronger, static */
 .bc-glow-tl {
 	position: absolute;
 	top: -80px; left: -60px;
@@ -739,7 +875,6 @@ button:active {
 	pointer-events: none;
 }
 
-/* Double-layer dot matrix for depth */
 .bc-dots {
 	position: absolute;
 	inset: 0;
@@ -751,7 +886,6 @@ button:active {
 	pointer-events: none;
 }
 
-/* ── Left: identity + meta ── */
 .bc-left {
 	position: relative;
 	flex: 1;
@@ -762,14 +896,12 @@ button:active {
 	z-index: 1;
 }
 
-/* ── PFP left, business name right — horizontal row ── */
 .bc-identity {
 	display: flex;
 	align-items: center;
 	gap: 20px;
 }
 
-/* ── Logo: no border, no glow ring, show original image ── */
 .bc-logo {
 	width: 110px;
 	height: 110px;
@@ -805,19 +937,17 @@ button:active {
 
 .bc-biz-name {
 	margin: 0;
-	font-size: 1.65rem;     /* fixed — same on screen and in PDF */
+	font-size: 1.65rem;
 	font-weight: 800;
 	letter-spacing: -0.04em;
 	line-height: 1.15;
 	word-break: break-word;
-	/* Gradient text — cyan → indigo */
 	background: linear-gradient(135deg, #ffffff 0%, #7dd3fc 55%, #c084fc 100%);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
 }
 
-/* Glowing hairline divider */
 .bc-rule {
 	height: 1px;
 	background: linear-gradient(90deg,
@@ -855,7 +985,6 @@ button:active {
 	flex-shrink: 0;
 }
 
-/* ── Vertical divider ── */
 .bc-vline {
 	width: 1px;
 	align-self: stretch;
@@ -868,7 +997,6 @@ button:active {
 	z-index: 1;
 }
 
-/* ── Right: QR ── */
 .bc-right {
 	display: flex;
 	flex-direction: column;
@@ -896,7 +1024,6 @@ button:active {
 	box-sizing: border-box;
 }
 
-/* Force exact square — source rendered at 400px, CSS constrains to 116px */
 .bc-qr-frame canvas,
 .bc-qr-frame img,
 #bcQrEl,
@@ -917,7 +1044,6 @@ button:active {
 	line-height: 1.5;
 }
 
-/* ── Download row ── */
 .bc-actions {
 	display: flex;
 	justify-content: flex-end;
@@ -964,12 +1090,121 @@ button:active {
 }
 
 /* ══════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — Mobile first
 ══════════════════════════════════════════════ */
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
 	.page-shell {
-		padding: 18px 12px;
+		padding: 16px 12px 32px;
+	}
+
+	.bc-section {
+		width: 100%;
+	}
+
+	.navbar {
+		justify-content: center;
+		padding: 14px 12px 0;
+		flex-wrap: wrap;
+	}
+
+	/* Business view: stack header vertically on small screens */
+	.business-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 14px;
+	}
+
+	.profile-badge {
+		max-width: 80px;
+	}
+
+	.business-fallback {
+		font-size: 1.8rem;
+		width: 80px;
+		height: 80px;
+	}
+
+	/* Grid collapses to 1 column */
+	.business-grid {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+
+	/* Cards: full width, slightly less padding */
+	.card {
+		padding: 20px 16px;
+		border-radius: 20px;
+	}
+
+	.business-panel {
+		padding: 14px;
+		border-radius: 18px;
+	}
+
+	.header-bio-gap {
+		height: 12px;
+	}
+
+	/* Detail rows: tighter on mobile */
+	.detail-row {
+		padding: 12px 14px;
+		gap: 12px;
+	}
+
+	.detail-icon {
+		width: 34px;
+		height: 34px;
+	}
+
+	.detail-icon svg {
+		width: 16px;
+		height: 16px;
+	}
+
+	.detail-label {
+		font-size: 0.62rem;
+	}
+
+	.detail-text {
+		font-size: 0.88rem;
+	}
+
+	/* Directory: full-width single column on small screens */
+	.directory-header {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.directory-card {
+		padding: 14px 16px;
+		gap: 12px;
+	}
+
+	/* Password field stacks on tiny screens */
+	.password-field {
+		flex-wrap: wrap;
+	}
+
+	.toggle-password-btn {
+		flex: 1 1 100%;
+	}
+
+	h1 {
+		font-size: clamp(1.7rem, 8vw, 2.2rem);
+	}
+}
+
+@media (max-width: 480px) {
+	.directory-card {
+		grid-template-columns: auto 1fr;
+		gap: 12px;
+	}
+
+	.directory-action-group {
+		grid-column: 2 / -1;
+		justify-self: start;
 	}
 
 	.lightning-field {
@@ -979,91 +1214,43 @@ button:active {
 	.lightning-line {
 		opacity: calc(var(--opacity) * 0.72);
 	}
-
-	.navbar {
-		justify-content: center;
-		padding: 16px 12px 0;
-		flex-wrap: wrap;
-	}
-
-	.card {
-		padding: 24px;
-		border-radius: 20px;
-	}
-
-	.business-header {
-		align-items: flex-start;
-	}
-
-	.header-bio-gap {
-		height: 18px;
-	}
-
-	.profile-badge {
-		max-width: 72px;
-		border-radius: 16px;
-	}
-
-	.business-fallback {
-		font-size: 1.6rem;
-		width: 68px;
-		height: 68px;
-	}
-
-	.business-grid {
-		grid-template-columns: 1fr;
-		gap: 10px;
-	}
-
-	.business-panel {
-		padding: 14px;
-		border-radius: 18px;
-	}
-
-	.directory-header {
-		align-items: flex-start;
-		flex-direction: column;
-	}
-
-	.directory-card {
-		grid-template-columns: auto 1fr;
-	}
-
-	.directory-action {
-		grid-column: 1 / -1;
-		justify-self: start;
-	}
-
-	h1 {
-		font-size: clamp(1.7rem, 8vw, 2.2rem);
-	}
-
-	.detail-row {
-		padding: 10px 11px;
-		gap: 10px;
-	}
-
-	.detail-icon {
-		width: 32px;
-		height: 32px;
-	}
-
-	.detail-icon svg {
-		width: 15px;
-		height: 15px;
-	}
-
-	.detail-label {
-		font-size: 0.6rem;
-	}
-
-	.detail-text {
-		font-size: 0.82rem;
-	}
 }
 
 @media (max-width: 600px) {
-	/* Card is fixed 660px and scrolls horizontally on small screens.
-	   No layout overrides needed — bc-section has overflow-x: auto. */
+	/* bc-card is fixed 660px and scrolls on small screens — no overrides */
 }
+
+/* ══════════════════════════════════════════════
+   PRINT
+══════════════════════════════════════════════ */
+
+@media print {
+	* {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+		color-adjust: exact !important;
+	}
+
+	body.printing-card .navbar,
+	body.printing-card .bc-actions {
+		display: none !important;
+	}
+
+	body.printing-card * {
+		visibility: hidden;
+	}
+
+	body.printing-card .bc-card,
+	body.printing-card .bc-card * {
+		visibility: visible;
+	}
+
+	body.printing-card .bc-card {
+		position: absolute;
+		top: 0;
+		left: 0;
+		margin: 0;
+		box-shadow: none !important;
+		border-radius: 0 !important;
+	}
 }

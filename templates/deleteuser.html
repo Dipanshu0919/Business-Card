@@ -45,19 +45,25 @@ async def delete_user(request: Request):
 
     <script>
 
-document.getElementById('deleteUserForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('username').value;
-    const response = await fetch('/delete_user', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username })
-    });
-    const result = await response.json();
-    alert(result.message);
-});
+        // send confirmation prompt before deleting user
+        document.getElementById('deleteUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const confirmation = confirm(`Are you sure you want to delete the user '${username}'? This action cannot be undone.`);
+            if (confirmation) {
+                const response = await fetch('/delete_user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username })
+                });
+                const result = await response.json();
+                alert(result.message);
+            } else {
+                alert("User deletion canceled.");
+            }
+        });
 </script>
 </body>
 </html>

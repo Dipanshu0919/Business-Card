@@ -82,6 +82,47 @@ def admin_required(request: Request):
         return False
 
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    conn, c = get_db()
+
+    if request.session.get("user_id"):
+        user = c.execute("SELECT * FROM users WHERE userid = ?", (request.session.get("user_id"),)).fetchone()
+    else:
+        user = None
+
+    is_admin = admin_required(request)
+
+    c.execute("""
+        SELECT userid, name, username, business_name, business_logo_url
+        FROM users
+        ORDER BY business_name COLLATE NOCASE ASC
+    """)
+    rows = c.fetchall()
+    conn.close()
+
+    businesses = []
+    for row in rows:
+        businesses.append({
+            "userid": row["userid"],
+            "name": row["name"],
+            "username": row["username"],
+            "business_name": row["business_name"],
+            "business_logo_url": row["business_logo_url"],
+        })
+
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "request": request,
+            "user": user,
+            "is_admin": is_admin,
+            "businesses": businesses,
+        }
+    )
+
+
 # add user only if admin
 @app.get("/adduser", response_class=HTMLResponse)
 async def add_user_form(request: Request, is_admin: bool = Depends(admin_required)):
@@ -139,8 +180,21 @@ async def add_user(request: Request):
     email = form.get("email")
     password = form.get("password")
     username = form.get("username")
-    print(f"Received data: name={name}, email={email}, password={password}, username={username}")
     conn, c = get_db()
+
+    # check if email or username already exists
+    c.execute("SELECT * FROM users WHERE email = ?", (email))
+    existing_user = c.fetchone()
+    if existing_user:
+        conn.close()
+        return {"message": "Email already exists."}
+        
+    c.execute("SELECT * FROM users WHERE username = ?", (username))
+    existing_user = c.fetchone()
+    if existing_user:
+        conn.close()
+        return {"message": "Username already exists."}
+
     c.execute("""
         INSERT OR IGNORE INTO users (name, email, password, username)
         VALUES (?, ?, ?, ?)
@@ -169,6 +223,25 @@ async def business_card(request: Request, username: str):
     )
 
 
+@app.get("/business/{username}/card", response_class=HTMLResponse)
+async def business_card_print(request: Request, username: str):
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    conn.close()
+    if user is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="business_card.html",
+        context={"request": request, "user": user}
+    )
+
+
 @app.post("/edit_business_details/{username}", response_class=JSONResponse)
 async def edit_business_details(request: Request, username: str):
     conn, c = get_db()
@@ -181,6 +254,10 @@ async def edit_business_details(request: Request, username: str):
             name="404.html",
             context={"request": request}
         )
+
+    if request.session.get("user_id") != user["userid"] or not admin_required(request):
+        conn.close()
+        return JSONResponse({"message": "Unauthorized access."}, status_code=403)
     
     form = await request.json()
     name = form.get("name")
@@ -228,7 +305,6 @@ async def upload_edit_logo(request: Request, username: str):
     if not file:
         return JSONResponse({"message": "No file uploaded."}, status_code=400)
 
-    # Save the uploaded file to the static directory
     file_location = f"static/uploads/{user['userid']}_{username}_logo.png"
     with open(file_location, "wb") as f:
         f.write(await file.read())
@@ -240,7 +316,7 @@ async def upload_edit_logo(request: Request, username: str):
     conn.commit()
     conn.close()
 
-    return JSONResponse({"message": "Business logo updated successfully.", "logo_url": file_location})
+    return JSONResponse({"message": "Business logo updated successfully.", "logo_url": db_path})
 
 
 @app.get("/edit_business_details/{username}", response_class=HTMLResponse)
@@ -248,6 +324,20 @@ async def edit_business_details_form(request: Request, username: str):
     conn, c = get_db()
     c.execute("SELECT * FROM users WHERE username = ?", (username,))
     user = c.fetchone()
+    if request.session.get("user_id") != user["userid"] and not admin_required(request):
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+    if user is None:
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
     conn.close()
     return templates.TemplateResponse(
         request=request,

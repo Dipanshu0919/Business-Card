@@ -1,0 +1,170 @@
+<!-- @app.get("/business/{username}/card", response_class=HTMLResponse)
+async def business_card_print(request: Request, username: str):
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    if user is None:
+        return templates.TemplateResponse(request=request, name="404.html", context={"request": request})
+    return templates.TemplateResponse(request=request, name="business_card.html", context={"request": request, "user": user}) -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user["business_name"] }} — Business Card</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <button onclick="window.location.href='/business/{{ user.username }}'">Back to Profile</button>
+        <button onclick="window.location.href='/dashboard'">Dashboard</button>
+        <button onclick="window.location.href='/'">Home</button>
+    </nav>
+
+    <main class="page-shell">
+        <div class="bc-standalone">
+
+            <!-- ★ THE DOWNLOADABLE / PRINTABLE CARD ★ -->
+            <div class="bc-card" id="bcCardEl">
+                <!-- static visual effects -->
+                <div class="bc-glow-tl"       aria-hidden="true"></div>
+                <div class="bc-glow-br"       aria-hidden="true"></div>
+                <div class="bc-dots"          aria-hidden="true"></div>
+                <div class="bc-accent-bar"    aria-hidden="true"></div>
+                <div class="bc-accent-bottom" aria-hidden="true"></div>
+                <div class="bc-corner bc-corner--tl" aria-hidden="true"></div>
+                <div class="bc-corner bc-corner--tr" aria-hidden="true"></div>
+                <div class="bc-corner bc-corner--bl" aria-hidden="true"></div>
+                <div class="bc-corner bc-corner--br" aria-hidden="true"></div>
+
+                <!-- LEFT: logo + name (horizontal) + contact meta -->
+                <div class="bc-left">
+
+                    <div class="bc-identity">
+                        <div class="bc-logo" aria-hidden="true">
+                            {% if user["business_logo_url"] %}
+                            <img src='{{ user["business_logo_url"] }}' alt='{{ user["business_name"] }}'>
+                            {% else %}
+                            <div class="bc-logo-init">{{ user["business_name"][0] if user["business_name"] else user["name"][0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="bc-text">
+                            <h2 class="bc-biz-name">{{ user["business_name"] }}</h2>
+                        </div>
+                    </div>
+
+                    <hr class="bc-rule">
+
+                    <div class="bc-meta">
+                        {% if user["contact"] %}
+                        <div class="bc-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.8 19.8 0 0 1 3.1 5.18 2 2 0 0 1 5.09 3h3a2 2 0 0 1 2 1.72c.12.86.34 1.7.65 2.5a2 2 0 0 1-.45 2.11L9 10.6a16 16 0 0 0 4.4 4.4l1.27-1.29a2 2 0 0 1 2.11-.45c.8.31 1.64.53 2.5.65A2 2 0 0 1 22 16.92Z"/></svg>
+                            {{ user["contact"] }}
+                        </div>
+                        {% endif %}
+                        <div class="bc-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
+                            {{ user["email"] }}
+                        </div>
+                        {% if user["business_website"] %}
+                        <div class="bc-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+                            {{ user["business_website"] }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="bc-vline" aria-hidden="true"></div>
+
+                <!-- RIGHT: QR code -->
+                <div class="bc-right">
+                    <div class="bc-qr-frame">
+                        <div id="bcQrEl"></div>
+                    </div>
+                    <p class="bc-scan-lbl">Scan for<br>more details</p>
+                </div>
+            </div>
+            <!-- /card -->
+
+            <!-- Print / Save as PDF — NOT part of the printable card -->
+            <div class="bc-actions">
+                <button class="bc-dl" id="bcPrintBtn" onclick="printBusinessCard()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 9V3h12v6"/>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                        <rect x="6" y="14" width="12" height="8"/>
+                    </svg>
+                    Print / Save as PDF
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- QR code renderer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        // Absolute profile URL — this is what the QR code points to, not this
+        // card-only page, so scanning it lands on the full business profile.
+        const profileUrl = "{{ request.base_url }}business/{{ user.username }}";
+
+        function renderQR() {
+            const el = document.getElementById('bcQrEl');
+            if (!el) return;
+            new QRCode(el, {
+                text: profileUrl,
+                width: 400,
+                height: 400,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            // Convert canvas → <img> (400px source, displayed at 116px — never upsampled)
+            setTimeout(() => {
+                const canvas = el.querySelector('canvas');
+                if (canvas) {
+                    const img = new Image();
+                    img.src = canvas.toDataURL('image/png');
+                    img.style.cssText = 'display:block;width:116px;height:116px;';
+                    el.innerHTML = '';
+                    el.appendChild(img);
+                }
+            }, 150);
+        }
+
+        document.addEventListener('DOMContentLoaded', renderQR);
+
+        // ── Print / "Save as PDF" — no new window. We size an @page rule to
+        // exactly match the card's current pixel dimensions, then print the
+        // current document with everything except the card hidden. ──
+        function printBusinessCard() {
+            const card = document.getElementById('bcCardEl');
+            const rect = card.getBoundingClientRect();
+
+            const PX_TO_MM = 25.4 / 96; // at 96dpi
+            const wMM = (rect.width * PX_TO_MM).toFixed(2);
+            const hMM = (rect.height * PX_TO_MM).toFixed(2);
+
+            let pageStyle = document.getElementById('bcPrintPageStyle');
+            if (!pageStyle) {
+                pageStyle = document.createElement('style');
+                pageStyle.id = 'bcPrintPageStyle';
+                document.head.appendChild(pageStyle);
+            }
+            pageStyle.textContent = `@page { size: ${wMM}mm ${hMM}mm; margin: 0; }`;
+
+            document.body.classList.add('printing-card');
+            window.print();
+        }
+
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('printing-card');
+        });
+    </script>
+</body>
+</html>
