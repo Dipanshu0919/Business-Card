@@ -27,6 +27,7 @@
 
         {% if request.session.get("user_id") %}
             <button onclick="redirectBusinessEditPage()">Edit Business Details</button>
+            <button onclick="window.location.href='/edit_services/{{ user.username }}'">Edit Services</button>
             <button onclick="window.location.href='/business/{{ user.username }}'">View Business Card</button>
             <button onclick="logout()">Logout</button>
         {% endif %}

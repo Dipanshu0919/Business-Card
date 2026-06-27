@@ -173,6 +173,19 @@ async def business_card(request: Request, username: str):
                     {% endif %}
                 </div>
             </div>
+            <br>
+            <!-- User services -->
+            <div class="business-panel">
+                <div class="panel-title">Services</div>
+                {% if user_services %}
+                    <ul class="services-list">
+                        {% for service in user_services %}
+                            <li>{{ service }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-services">No services listed.</p>
+                {% endif %}
         </section>
 
         <!-- ════════════════ BUSINESS CARD LINK ════════════════ -->

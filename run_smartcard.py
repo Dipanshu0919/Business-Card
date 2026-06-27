@@ -209,6 +209,13 @@ async def business_card(request: Request, username: str):
     conn, c = get_db()
     c.execute("SELECT * FROM users WHERE username = ?", (username,))
     user = c.fetchone()
+    services = c.execute("""
+        SELECT s.service_name
+        FROM services s
+        JOIN user_services us ON s.serviceid = us.serviceid
+        WHERE us.userid = ?
+    """, (user["userid"],)).fetchall()
+    user_services = [row["service_name"] for row in services]
     conn.close()
     if user is None:
         return templates.TemplateResponse(
@@ -219,7 +226,7 @@ async def business_card(request: Request, username: str):
     return templates.TemplateResponse(
         request=request,
         name="business_view.html",
-        context={"request": request, "user": user}
+        context={"request": request, "user": user, "user_services": user_services}
     )
 
 
@@ -345,6 +352,94 @@ async def edit_business_details_form(request: Request, username: str):
         context={"request": request, "user": user}
     )
 
+@app.get("/edit_services/{username}", response_class=HTMLResponse)
+async def edit_services_form(request: Request, username: str):
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    if request.session.get("user_id") != user["userid"] and not admin_required(request):
+        all_services = []
+        user_services = []
+        for x in c.execute("SELECT service_name FROM services").fetchall():
+            all_services.append(x["service_name"])
+
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request, "all_services": all_services, "user_services": user_services}
+        )
+    if user is None:
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+
+    # get all services
+    c.execute("SELECT service_name FROM services")
+    all_services = [row[0] for row in c.fetchall()]
+
+    # get user's services
+    c.execute("""
+        SELECT s.service_name
+        FROM services s
+        JOIN user_services us ON s.serviceid = us.serviceid
+        WHERE us.userid = ?
+    """, (user["userid"],))
+    user_services = [row[0] for row in c.fetchall()]
+
+    conn.close()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="edit_services.html",
+        context={
+            "request": request,
+            "user": user,
+            "all_services": all_services,
+            "user_services": user_services
+        }
+    )
+
+@app.post("/edit_services/{username}", response_class=JSONResponse)
+async def edit_services(request: Request, username: str):
+    conn, c = get_db()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    if user is None:
+        conn.close()
+        return templates.TemplateResponse(
+            request=request,
+            name="404.html",
+            context={"request": request}
+        )
+
+    if request.session.get("user_id") != user["userid"] and not admin_required(request):
+        conn.close()
+        return JSONResponse({"message": "Unauthorized access."}, status_code=403)
+    
+    form = await request.json()
+    services = form.get("services", [])
+
+    # delete all existing services for the user
+    c.execute("DELETE FROM user_services WHERE userid = ?", (user["userid"],))
+
+    # get all services
+    c.execute("SELECT service_name FROM services")
+    existing_services = [row[0] for row in c.fetchall()]
+
+    for x in services:
+        if x not in existing_services:
+            c.execute("INSERT INTO services (service_name) VALUES (?)", (x,))
+
+        c.execute("INSERT INTO user_services (userid, serviceid) VALUES (?, (SELECT serviceid FROM services WHERE service_name = ?))", (user["userid"], x))
+
+    conn.commit()
+    conn.close()
+    return JSONResponse({"message": "Services updated successfully."})
+
 
 @app.api_route("/login", methods=["GET", "POST"])
 async def login(request: Request):
@@ -409,6 +504,7 @@ async def admin_logout(request: Request):
 async def logout(request: Request):
     request.session.pop("user_id", None)
     return {"message": "User logged out successfully."}
+
 
 
 if __name__ == "__main__":

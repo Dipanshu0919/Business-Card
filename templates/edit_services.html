@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Services — {{ username }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/decor.js"></script>
+</head>
+<body>
+
+<div class="lightning-field" id="lightningField"></div>
+
+<nav class="navbar">
+    <button onclick="history.back()">← Back</button>
+</nav>
+
+<div class="page-shell">
+    <div class="card">
+        <span class="card-badge">✦ Services</span>
+        <h1>Edit Services</h1>
+        <p class="role">Manage the services your business offers</p>
+
+        <div style="height: 24px"></div>
+
+        <p class="svc-hint">Your Services</p>
+        <div id="svcRows" class="svc-rows"></div>
+
+        <button class="svc-save" onclick="saveServices()">
+            Save Services
+        </button>
+        <div class="svc-status" id="svcStatus"></div>
+    </div>
+</div>
+
+<script>
+    // ── Server-injected data ─────────────────────────────
+    const USERNAME  = {{ user.username | tojson }};
+    const ALL_SVCS  = {{ all_services | tojson }};  // every known service
+    const USER_SVCS = {{ user_services | tojson }}; // this user's current services
+
+    let _nextId = 0;
+
+    // ── Utility ──────────────────────────────────────────
+    function esc(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ── Track values across all inputs ───────────────────
+    function usedValues() {
+        const set = new Set();
+        document.querySelectorAll('.svc-input').forEach(el => {
+            const v = el.value.trim();
+            if (v) set.add(v.toLowerCase());
+        });
+        return set;
+    }
+
+    // ── Suggestion filtering ─────────────────────────────
+    function filterSuggs(query, ownId) {
+        const used = usedValues();
+        const own = document.querySelector(`.svc-input[data-id="${ownId}"]`);
+        if (own) used.delete(own.value.trim().toLowerCase());
+
+        const q = query.trim().toLowerCase();
+        return ALL_SVCS.filter(s => {
+            if (used.has(s.toLowerCase())) return false;
+            return !q || s.toLowerCase().includes(q);
+        });
+    }
+
+    // ── Render suggestion panel as chips ─────────────────
+    function renderPanel(rowId, query) {
+        const panel = document.getElementById(`sp-${rowId}`);
+        if (!panel) return;
+
+        const list = filterSuggs(query, rowId);
+        const q = query.trim();
+
+        if (!list.length && !q) {
+            panel.innerHTML = '';
+            return;
+        }
+
+        if (!list.length && q) {
+            panel.innerHTML = `<div class="sugg-empty">Press <kbd>Enter</kbd> to add <strong style="color:var(--accent)">"${esc(q)}"</strong></div>`;
+            return;
+        }
+
+        panel.innerHTML = list
+            .map(s =>
+                `<button type="button" class="sugg-chip" data-val="${esc(s)}">
+                    ${esc(s)}
+                </button>`
+            )
+            .join('');
+    }
+
+    // Re-render every open panel after a pick/remove
+    function refreshOpenPanels(skipId = null) {
+        document.querySelectorAll('.svc-input').forEach(inp => {
+            const rid = inp.dataset.id;
+            if (String(rid) === String(skipId)) return;
+            const panel = document.getElementById(`sp-${rid}`);
+            if (panel && panel.classList.contains('open')) {
+                renderPanel(rid, inp.value.trim());
+            }
+        });
+    }
+
+    // ── Add / remove rows ────────────────────────────────
+    function addRow(value = '', afterId = null, doFocus = true) {
+        const id = ++_nextId;
+        const container = document.getElementById('svcRows');
+
+        const row = document.createElement('div');
+        row.className = 'svc-row';
+        row.dataset.id = id;
+        row.innerHTML =
+            `<div class="sugg-wrap">` +
+                `<input class="svc-input" type="text" data-id="${id}"` +
+                       ` value="${esc(value)}" placeholder="Type a service…"` +
+                       ` autocomplete="off" spellcheck="false">` +
+                `<div class="sugg-panel" id="sp-${id}"></div>` +
+            `</div>` +
+            `<button class="svc-btn svc-btn--rm"   title="Remove this service">×</button>` +
+            `<button class="svc-btn svc-btn--plus" title="Add another service">+</button>`;
+
+        if (afterId !== null) {
+            const ref = container.querySelector(`.svc-row[data-id="${afterId}"]`);
+            ref ? container.insertBefore(row, ref.nextSibling) : container.appendChild(row);
+        } else {
+            container.appendChild(row);
+        }
+
+        row.querySelector('.svc-btn--rm').addEventListener('click', () => removeRow(id));
+        row.querySelector('.svc-btn--plus').addEventListener('click', () => addRow('', id, true));
+
+        const inp = row.querySelector('.svc-input');
+        const panel = document.getElementById(`sp-${id}`);
+
+        inp.addEventListener('focus', () => {
+            renderPanel(id, inp.value.trim());
+            panel.classList.add('open');
+        });
+
+        inp.addEventListener('blur', () => {
+            setTimeout(() => panel.classList.remove('open'), 180);
+        });
+
+        inp.addEventListener('input', () => {
+            renderPanel(id, inp.value.trim());
+            const v = inp.value.trim().toLowerCase();
+            if (ALL_SVCS.some(s => s.toLowerCase() === v)) {
+                refreshOpenPanels(id);
+            }
+        });
+
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const first = panel.querySelector('.sugg-chip');
+                if (first) {
+                    pickSugg(id, first.dataset.val);
+                } else if (inp.value.trim()) {
+                    panel.classList.remove('open');
+                    addRow('', id, true);
+                }
+            } else if (e.key === 'Escape') {
+                panel.classList.remove('open');
+                inp.blur();
+            }
+        });
+
+        // Chips use mousedown so blur doesn't fire before click
+        panel.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const chip = e.target.closest('.sugg-chip');
+            if (chip) pickSugg(id, chip.dataset.val);
+        });
+
+        renderPanel(id, value);
+
+        if (doFocus) {
+            setTimeout(() => inp.focus(), 30);
+        }
+
+        return id;
+    }
+
+    function removeRow(id) {
+        const rows = document.querySelectorAll('.svc-row');
+        if (rows.length <= 1) {
+            const inp = document.querySelector(`.svc-input[data-id="${id}"]`);
+            if (inp) inp.value = '';
+            renderPanel(id, '');
+            refreshOpenPanels(id);
+            return;
+        }
+        const row = document.querySelector(`.svc-row[data-id="${id}"]`);
+        if (row) {
+            row.remove();
+            refreshOpenPanels();
+        }
+    }
+
+    // ── Pick a suggestion ─────────────────────────────────
+    function pickSugg(rowId, value) {
+        const inp = document.querySelector(`.svc-input[data-id="${rowId}"]`);
+        if (inp) inp.value = value;
+        document.getElementById(`sp-${rowId}`)?.classList.remove('open');
+        refreshOpenPanels(rowId);
+    }
+
+    // ── Save ─────────────────────────────────────────────
+    async function saveServices() {
+        const services = [];
+        const seen = new Set();
+        document.querySelectorAll('.svc-input').forEach(el => {
+            const v = el.value.trim();
+            if (v && !seen.has(v.toLowerCase())) {
+                services.push(v);
+                seen.add(v.toLowerCase());
+            }
+        });
+
+        const st = document.getElementById('svcStatus');
+        st.className = 'svc-status';
+        st.textContent = '';
+
+        try {
+            const res = await fetch(`/edit_services/${USERNAME}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ services }),
+            });
+            const data = await res.json();
+            st.className = `svc-status ${res.ok ? 'ok' : 'err'}`;
+            st.textContent = data.message || (res.ok ? 'Services saved!' : 'Something went wrong.');
+        } catch {
+            st.className = 'svc-status err';
+            st.textContent = 'Network error — please try again.';
+        }
+    }
+
+    // ── Init ─────────────────────────────────────────────
+    (function init() {
+        if (USER_SVCS.length === 0) {
+            addRow('', null, true);
+        } else {
+            USER_SVCS.forEach(svc => addRow(svc, null, false));
+            addRow('', null, false);
+        }
+    })();
+</script>
+
+</body>
+</html>
